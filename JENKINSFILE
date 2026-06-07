@@ -23,12 +23,7 @@ pipeline {
                     python3 -m bandit -r src -f json -o reports/bandit.json || true
                 '''
 
-                recordIssues(
-                    enabledForFailure: true,
-                    tools: [flake8(pattern: 'reports/flake8.out')]
-                )
-
-                archiveArtifacts artifacts: 'reports/bandit.json', fingerprint: true
+                archiveArtifacts artifacts: 'reports/flake8.out, reports/bandit.json', fingerprint: true
                 sh 'echo "Informes de Flake8 y Bandit generados"'
             }
         }
