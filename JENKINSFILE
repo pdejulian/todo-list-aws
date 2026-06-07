@@ -37,7 +37,7 @@ pipeline {
                     sam validate --region eu-west-1
                     sam deploy \
                       --stack-name staging-todo-list-aws \
-                      --region eu-west-1 \
+                      --region us-east-1 \
                       --s3-bucket poletillo333 \
                       --s3-prefix todolist \
                       --capabilities CAPABILITY_IAM \
