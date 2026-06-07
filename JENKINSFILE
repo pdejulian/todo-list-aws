@@ -2,19 +2,13 @@ pipeline {
     agent any
 
     stages {
-                deleteDir()
-                git branch: 'develop', url: 'https://github.com/pdejulian/todo-list-aws.git'
-                sh 'echo "Codigo descargado de la rama develop"'
-            }
-        }
         stage('Get Code') {
             steps {
+                deleteDir()
                 git credentialsId: 'github-token',
                     branch: 'develop',
                     url: 'https://github.com/pdejulian/todo-list-aws.git'
-                dir('config') {
-                    deleteDir()
-                }
+                sh 'echo "Codigo descargado de la rama develop"'
             }
         }
         stage('Static Test') {
