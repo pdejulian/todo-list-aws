@@ -33,7 +33,7 @@ pipeline {
                 sh '''
                     sam --version
                     sam build
-                    sam validate
+                    sam validate --region eu-west-1
                     sam deploy \
                       --stack-name staging-todo-list-aws \
                       --region eu-west-1 \
