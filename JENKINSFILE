@@ -1,0 +1,106 @@
+pipeline {
+    agent any
+
+    stages {
+                deleteDir()
+                git branch: 'develop', url: 'https://github.com/pdejulian/todo-list-aws.git'
+                sh 'echo "Codigo descargado de la rama develop"'
+            }
+        }
+        stage('Get Code') {
+            steps {
+                git credentialsId: 'github-token',
+                    branch: 'develop',
+                    url: 'https://github.com/pdejulian/todo-list-aws.git'
+                dir('config') {
+                    deleteDir()
+                }
+            }
+        }
+        stage('Static Test') {
+            steps {
+                sh '''
+                    mkdir -p reports
+
+                    python3 -m flake8 src \
+                    --format="%(path)s:%(row)d:%(col)d: %(code)s %(text)s" \
+                    > reports/flake8.out || true
+
+                    python3 -m bandit -r src -f json -o reports/bandit.json || true
+                '''
+
+                recordIssues(
+                    enabledForFailure: true,
+                    tools: [flake8(pattern: 'reports/flake8.out')]
+                )
+
+                archiveArtifacts artifacts: 'reports/bandit.json', fingerprint: true
+                sh 'echo "Informes de Flake8 y Bandit generados"'
+            }
+        }
+
+        stage('Deploy') {
+            steps {
+                sh '''
+                    sam --version
+                    sam build
+                    sam validate
+                    sam deploy \
+                      --stack-name staging-todo-list-aws \
+                      --region eu-west-1 \
+                      --s3-bucket poletillo333 \
+                      --s3-prefix todolist \
+                      --capabilities CAPABILITY_IAM \
+                      --no-confirm-changeset \
+                      --no-fail-on-empty-changeset
+                '''
+
+                sh '''
+                    aws cloudformation describe-stacks \
+                      --stack-name staging-todo-list-aws \
+                      --region eu-west-1 \
+                      --query "Stacks[0].Outputs[?OutputKey=='TodoApiUrl'].OutputValue" \
+                      --output text > api-url.txt
+                '''
+
+                sh 'echo "URL de la API desplegada:" && cat api-url.txt'
+            }
+        }
+
+        stage('Rest Test') {
+            steps {
+                sh '''
+                    mkdir -p reports
+                    export TODO_API_URL=$(cat api-url.txt)
+                    pytest --junitxml=reports/result-rest.xml test/integration/todoApiTest.py
+                '''
+            }
+            post {
+                always {
+                    junit 'reports/result-rest.xml'
+                }
+            }
+        }
+
+        stage('Promote') {
+            steps {
+                sh '''
+                    git config user.name "Jenkins"
+                    git config user.email "jenkins@local"
+
+                    git fetch origin
+                    git checkout master
+                    git pull origin master
+                    git merge origin/develop --no-ff -m "Commit automatico desde develop a master"
+                    git push origin master
+                '''
+            }
+        }
+    }
+
+    post {
+        always {
+            archiveArtifacts artifacts: 'reports/*, api-url.txt', fingerprint: true, allowEmptyArchive: true
+        }
+    }
+}
