@@ -34,7 +34,7 @@ pipeline {
                 sh '''
                     sam --version
                     sam build
-                    sam validate --region eu-west-1
+                    sam validate --region us-east-1
                     sam deploy \
                       --stack-name staging-todo-list-aws \
                       --region us-east-1 \
@@ -48,8 +48,8 @@ pipeline {
                 sh '''
                     aws cloudformation describe-stacks \
                       --stack-name staging-todo-list-aws \
-                      --region eu-east-1 \
-                      --query "Stacks[0].Outputs[?OutputKey=='TodoApiUrl'].OutputValue" \
+                      --region us-east-1 \
+                      --query "Stacks[0].Outputs[?OutputKey=='BaseApiUrl'].OutputValue" \
                       --output text > api-url.txt
                 '''
 
