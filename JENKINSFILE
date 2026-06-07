@@ -48,7 +48,7 @@ pipeline {
                 sh '''
                     aws cloudformation describe-stacks \
                       --stack-name staging-todo-list-aws \
-                      --region eu-west-1 \
+                      --region eu-east-1 \
                       --query "Stacks[0].Outputs[?OutputKey=='TodoApiUrl'].OutputValue" \
                       --output text > api-url.txt
                 '''
