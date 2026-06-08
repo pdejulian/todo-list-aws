@@ -3,7 +3,7 @@ pipeline {
 
     stages {
         stage('Get Code') {
-            agent { label 'agent3' }
+            agent { label 'agent1' }
             steps {
                 deleteDir()
                 git branch: 'master',
@@ -22,6 +22,7 @@ pipeline {
             agent { label 'agent3' }
             steps {
                 deleteDir()
+                unstash 'source'
                 sh '''
                     whoami
                     hostname
