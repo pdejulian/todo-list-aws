@@ -3,7 +3,7 @@ pipeline {
 
     stages {
         stage('Get Code') {
-            agent any
+            agent { label 'agent3' }
             steps {
                 deleteDir()
                 git credentialsId: 'github-token',
@@ -40,7 +40,7 @@ pipeline {
         }
 
         stage('Deploy') {
-            agent any
+            agent { label 'agent3' }
             steps {
                 deleteDir()
                 unstash 'source-tested'
@@ -96,7 +96,7 @@ pipeline {
         }
 
         stage('Promote') {
-            agent any
+            agent { label 'agent3' }
             steps {
                 deleteDir()
                 unstash 'deploy-workspace'
