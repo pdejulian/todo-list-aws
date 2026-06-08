@@ -6,8 +6,8 @@ pipeline {
             agent { label 'agent3' }
             steps {
                 deleteDir()
-                git credentialsId: 'github-token',
-                    branch: 'develop',
+                git branch: 'develop',
+                    credentialsId: 'github-token',
                     url: 'https://github.com/pdejulian/todo-list-aws.git'
                 sh '''
                     whoami
@@ -101,7 +101,8 @@ pipeline {
             agent { label 'agent3' }
             steps {
                 deleteDir()
-                    branch: 'develop',
+                git branch: 'develop',
+                    credentialsId: 'github-token',
                     url: 'https://github.com/pdejulian/todo-list-aws.git'
                 withCredentials([usernamePassword(credentialsId: 'github-token', usernameVariable: 'GIT_USERNAME', passwordVariable: 'GIT_TOKEN')]) {
                 sh '''
