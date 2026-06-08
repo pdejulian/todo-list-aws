@@ -49,7 +49,7 @@ pipeline {
                     aws cloudformation describe-stacks \
                       --stack-name staging-todo-list-aws \
                       --region us-east-1 \
-                      --query "Stacks[0].Outputs[?OutputKey=='BaseApiUrl'].OutputValue" \
+                      --query "Stacks[0].Outputs" \
                       --output text > api-url.txt
                 '''
                 stash name: 'api-url', includes: 'api-url.txt'
