@@ -85,7 +85,7 @@ pipeline {
                     git checkout master
                     git pull origin master
                     git merge origin/develop --no-ff -m "Commit automatico desde develop a master"
-                    git push https://pdejulian:${GIT_TOKEN}@github.com/pdejulian/todo-list-aws.git master
+                    git push https://${GIT_USERNAME}:${GIT_TOKEN}@github.com/pdejulian/todo-list-aws.git master
                 '''
                 }
             }
