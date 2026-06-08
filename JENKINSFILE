@@ -1,20 +1,52 @@
 pipeline {
-    agent any
+    agent none
 
     stages {
         stage('Get Code') {
+            agent { label 'agent3' }
             steps {
                 deleteDir()
-                git credentialsId: 'github-token',
-                    branch: 'master',
+                git branch: 'develop',
+                    credentialsId: 'github-token',
                     url: 'https://github.com/pdejulian/todo-list-aws.git'
-                sh 'echo "Codigo descargado de la rama master"'
+                sh '''
+                    whoami
+                    hostname
+                '''
+                sh 'echo "Codigo descargado de la rama develop"'
+                stash name: 'source', includes: '**/*'
+            }
+        }
+        stage('Static Test') {
+            agent { label 'agent1' }
+            steps {
+                deleteDir()
+                unstash 'source'
+                sh '''
+                    whoami
+                    hostname
+                    mkdir -p reports
+
+                    python3 -m flake8 src \
+                    --format="%(path)s:%(row)d:%(col)d: %(code)s %(text)s" \
+                    > reports/flake8.out || true
+
+                    python3 -m bandit -r src -f json -o reports/bandit.json || true
+                '''
+                stash name: 'source-tested', includes: '**/*'
+                archiveArtifacts artifacts: 'reports/flake8.out, reports/bandit.json', fingerprint: true
+                sh 'echo "Informes de Flake8 y Bandit generados"'
             }
         }
 
-        stage('Deploy-pro') {
+        stage('Deploy') {
+            agent { label 'agent3' }
             steps {
+                deleteDir()
+                unstash 'source-tested'
                 sh '''
+                    whoami
+                    hostname
                     sam --version
                     sam build
                     sam validate --region us-east-1
@@ -36,19 +68,27 @@ pipeline {
                       --output text > api-url.txt
                 '''
                 stash name: 'api-url', includes: 'api-url.txt'
+                stash name: 'deploy-workspace', includes: '**/*'
+                archiveArtifacts artifacts: 'api-url.txt', fingerprint: true, allowEmptyArchive: true
                 sh 'echo "URL de la API desplegada:" && cat api-url.txt'
             }
         }
 
         stage('Rest Test') {
+            agent { label 'agent2' }
             steps {
+                deleteDir()
+                unstash 'deploy-workspace'
                 unstash 'api-url'
                 sh '''
+                    whoami
+                    hostname
                     mkdir -p reports
                     export BASE_URL=$(cat api-url.txt)
                     echo "BASE_URL=$BASE_URL"
                     pytest --junitxml=reports/result-rest.xml test/integration/todoApiTest.py
                 '''
+                archiveArtifacts artifacts: 'reports/result-rest.xml', fingerprint: true, allowEmptyArchive: true
             }
             post {
                 always {
@@ -56,11 +96,29 @@ pipeline {
                 }
             }
         }
-    }
 
-    post {
-        always {
-            archiveArtifacts artifacts: 'reports/*, api-url.txt', fingerprint: true, allowEmptyArchive: true
+        stage('Promote') {
+            agent { label 'agent3' }
+            steps {
+                deleteDir()
+                git branch: 'develop',
+                    credentialsId: 'github-token',
+                    url: 'https://github.com/pdejulian/todo-list-aws.git'
+                withCredentials([usernamePassword(credentialsId: 'github-token', usernameVariable: 'GIT_USERNAME', passwordVariable: 'GIT_TOKEN')]) {
+                sh '''
+                    whoami
+                    hostname
+                    git config user.name "pdejulian"
+                    git config user.email "pdejulian@gmail.com"
+
+                    git fetch origin
+                    git checkout master
+                    git pull origin master
+                    git merge -X theirs origin/develop --no-ff -m "Commit automatico desde develop a master"
+                    git push https://${GIT_USERNAME}:${GIT_TOKEN}@github.com/pdejulian/todo-list-aws.git master
+                '''
+                }
+            }
         }
     }
 }
