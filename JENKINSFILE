@@ -9,6 +9,10 @@ pipeline {
                 git credentialsId: 'github-token',
                     branch: 'develop',
                     url: 'https://github.com/pdejulian/todo-list-aws.git'
+                sh '''
+                    whoami
+                    hostname
+                '''
                 sh 'echo "Codigo descargado de la rama develop"'
                 stash name: 'source', includes: '**/*'
             }
@@ -19,6 +23,8 @@ pipeline {
                 deleteDir()
                 unstash 'source'
                 sh '''
+                    whoami
+                    hostname
                     mkdir -p reports
 
                     python3 -m flake8 src \
@@ -39,6 +45,8 @@ pipeline {
                 deleteDir()
                 unstash 'source-tested'
                 sh '''
+                    whoami
+                    hostname
                     sam --version
                     sam build
                     sam validate --region us-east-1
@@ -72,6 +80,8 @@ pipeline {
                 unstash 'deploy-workspace'
                 unstash 'api-url'
                 sh '''
+                    whoami
+                    hostname
                     mkdir -p reports
                     export BASE_URL=$(cat api-url.txt)
                     echo "BASE_URL=$BASE_URL"
@@ -92,6 +102,8 @@ pipeline {
                 unstash 'deploy-workspace'
                 withCredentials([usernamePassword(credentialsId: 'github-token', usernameVariable: 'GIT_USERNAME', passwordVariable: 'GIT_TOKEN')]) {
                 sh '''
+                    whoami
+                    hostname
                     git config user.name "pdejulian"
                     git config user.email "pdejulian@gmail.com"
 
