@@ -29,7 +29,6 @@ pipeline {
         }
 
         stage('Deploy') {
-            agent { label 'principal' }
             steps {
                 sh '''
                     sam --version
