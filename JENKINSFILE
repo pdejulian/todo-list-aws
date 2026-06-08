@@ -12,8 +12,9 @@ pipeline {
                 sh '''
                     whoami
                     hostname
+                    curl -L -o samconfig.toml https://raw.githubusercontent.com/pdejulian/todo-list-aws-config/staging/samconfig.toml
                 '''
-                sh 'echo "Codigo descargado de la rama develop"'
+                sh 'echo "Codigo y configuración descargados de las ramas develop y staging"'
                 stash name: 'source', includes: '**/*'
             }
         }
