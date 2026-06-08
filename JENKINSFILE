@@ -1,18 +1,23 @@
 pipeline {
-    agent any
+    agent none
 
     stages {
         stage('Get Code') {
+            agent any
             steps {
                 deleteDir()
                 git credentialsId: 'github-token',
                     branch: 'develop',
                     url: 'https://github.com/pdejulian/todo-list-aws.git'
                 sh 'echo "Codigo descargado de la rama develop"'
+                stash name: 'source', includes: '**/*'
             }
         }
         stage('Static Test') {
+            agent { label 'agent1' }
             steps {
+                deleteDir()
+                unstash 'source'
                 sh '''
                     mkdir -p reports
 
@@ -22,14 +27,17 @@ pipeline {
 
                     python3 -m bandit -r src -f json -o reports/bandit.json || true
                 '''
-
+                stash name: 'source-tested', includes: '**/*'
                 archiveArtifacts artifacts: 'reports/flake8.out, reports/bandit.json', fingerprint: true
                 sh 'echo "Informes de Flake8 y Bandit generados"'
             }
         }
 
         stage('Deploy') {
+            agent any
             steps {
+                deleteDir()
+                unstash 'source-tested'
                 sh '''
                     sam --version
                     sam build
@@ -52,12 +60,16 @@ pipeline {
                       --output text > api-url.txt
                 '''
                 stash name: 'api-url', includes: 'api-url.txt'
+                stash name: 'deploy-workspace', includes: '**/*'
                 sh 'echo "URL de la API desplegada:" && cat api-url.txt'
             }
         }
 
         stage('Rest Test') {
+            agent { label 'agent2' }
             steps {
+                deleteDir()
+                unstash 'deploy-workspace'
                 unstash 'api-url'
                 sh '''
                     mkdir -p reports
@@ -74,7 +86,10 @@ pipeline {
         }
 
         stage('Promote') {
+            agent any
             steps {
+                deleteDir()
+                unstash 'deploy-workspace'
                 withCredentials([usernamePassword(credentialsId: 'github-token', usernameVariable: 'GIT_USERNAME', passwordVariable: 'GIT_TOKEN')]) {
                 sh '''
                     git config user.name "pdejulian"
