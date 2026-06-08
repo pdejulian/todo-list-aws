@@ -47,7 +47,7 @@ pipeline {
                     mkdir -p reports
                     export BASE_URL=$(cat api-url.txt)
                     echo "BASE_URL=$BASE_URL"
-                    pytest -m readonly --junitxml=reports/result-rest.xml test/integration/todoApiTest.py
+                    pytest --junitxml=reports/result-rest.xml -m readonly test/integration/todoApiTest.py || pytest --junitxml=reports/result-rest.xml test/integration/todoApiTest.py'
                 '''
             }
             post {
