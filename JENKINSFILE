@@ -77,8 +77,8 @@ pipeline {
         stage('Promote') {
             steps {
                 sh '''
-                    git config user.name "Jenkins"
-                    git config user.email "jenkins@local"
+                    git config user.name "pdejulian"
+                    git config user.email "pdejulian@gmail.com"
 
                     git fetch origin
                     git checkout master
