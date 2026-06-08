@@ -49,7 +49,7 @@ pipeline {
                     aws cloudformation describe-stacks \
                       --stack-name staging-todo-list-aws \
                       --region us-east-1 \
-                      --query "Stacks[0].Outputs" \
+                      --query "Stacks[0].Outputs[?OutputKey=='BaseUrlApi'].OutputValue" \
                       --output text > api-url.txt
                 '''
                 stash name: 'api-url', includes: 'api-url.txt'
@@ -62,7 +62,8 @@ pipeline {
                 unstash 'api-url'
                 sh '''
                     mkdir -p reports
-                    export TODO_API_URL=$(cat api-url.txt)
+                    export BASE_URL=$(cat api-url.txt)
+                    echo "BASE_URL=$BASE_URL"
                     pytest --junitxml=reports/result-rest.xml test/integration/todoApiTest.py
                 '''
             }
