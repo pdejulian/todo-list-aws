@@ -12,8 +12,9 @@ pipeline {
                 sh '''
                     whoami
                     hostname
+                    curl -L -o samconfig.toml https://raw.githubusercontent.com/pdejulian/todo-list-aws-config/staging/samconfig.toml
                 '''
-                sh 'echo "Codigo descargado de la rama master"'
+                sh 'echo "Codigo y configuración descargados de las ramas develop y staging"'
                 stash name: 'source', includes: '**/*'
             }
         }
@@ -29,14 +30,7 @@ pipeline {
                     sam --version
                     sam build
                     sam validate --region us-east-1
-                    sam deploy \
-                      --stack-name production-todo-list-aws \
-                      --region us-east-1 \
-                      --s3-bucket poletillo333 \
-                      --s3-prefix todolist \
-                      --capabilities CAPABILITY_IAM \
-                      --no-confirm-changeset \
-                      --no-fail-on-empty-changeset
+                    sam deploy --config-env staging --no-fail-on-empty-changeset
                 '''
 
                 sh '''
