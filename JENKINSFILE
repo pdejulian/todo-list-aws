@@ -51,7 +51,7 @@ pipeline {
                     sam --version
                     sam build
                     sam validate --region us-east-1
-                    sam deploy
+                    sam deploy --config-env staging
                 '''
 
                 sh '''
