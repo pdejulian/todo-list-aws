@@ -69,6 +69,7 @@ pipeline {
                 '''
                 stash name: 'api-url', includes: 'api-url.txt'
                 stash name: 'deploy-workspace', includes: '**/*'
+                archiveArtifacts artifacts: 'api-url.txt', fingerprint: true, allowEmptyArchive: true
                 sh 'echo "URL de la API desplegada:" && cat api-url.txt'
             }
         }
@@ -87,6 +88,7 @@ pipeline {
                     echo "BASE_URL=$BASE_URL"
                     pytest --junitxml=reports/result-rest.xml test/integration/todoApiTest.py
                 '''
+                archiveArtifacts artifacts: 'reports/result-rest.xml', fingerprint: true, allowEmptyArchive: true
             }
             post {
                 always {
@@ -99,7 +101,8 @@ pipeline {
             agent { label 'agent3' }
             steps {
                 deleteDir()
-                unstash 'deploy-workspace'
+                    branch: 'develop',
+                    url: 'https://github.com/pdejulian/todo-list-aws.git'
                 withCredentials([usernamePassword(credentialsId: 'github-token', usernameVariable: 'GIT_USERNAME', passwordVariable: 'GIT_TOKEN')]) {
                 sh '''
                     whoami
@@ -115,12 +118,6 @@ pipeline {
                 '''
                 }
             }
-        }
-    }
-
-    post {
-        always {
-            archiveArtifacts artifacts: 'reports/*, api-url.txt', fingerprint: true, allowEmptyArchive: true
         }
     }
 }
