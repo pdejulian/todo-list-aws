@@ -52,13 +52,14 @@ pipeline {
                       --query "Stacks[0].Outputs[?OutputKey=='BaseApiUrl'].OutputValue" \
                       --output text > api-url.txt
                 '''
-
+                stash name: 'api-url', includes: 'api-url.txt'
                 sh 'echo "URL de la API desplegada:" && cat api-url.txt'
             }
         }
 
         stage('Rest Test') {
             steps {
+                unstash 'api-url'
                 sh '''
                     mkdir -p reports
                     export TODO_API_URL=$(cat api-url.txt)
