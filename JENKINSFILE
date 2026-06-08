@@ -91,6 +91,7 @@ pipeline {
                     git merge origin/develop --no-ff -m "Commit automatico desde develop a master"
                     git push https://${GIT_USERNAME}:${GIT_PASSWORD}@github.com/pdejulian/todo-list-aws.git master
                 '''
+                }
             }
         }
     }
