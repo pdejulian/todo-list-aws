@@ -1,0 +1,100 @@
+pipeline {
+    agent any
+
+    stages {
+        stage('Get Code') {
+            steps {
+                deleteDir()
+                git credentialsId: 'github-token',
+                    branch: 'develop',
+                    url: 'https://github.com/pdejulian/todo-list-aws.git'
+                sh 'echo "Codigo descargado de la rama develop"'
+            }
+        }
+        stage('Static Test') {
+            steps {
+                sh '''
+                    mkdir -p reports
+
+                    python3 -m flake8 src \
+                    --format="%(path)s:%(row)d:%(col)d: %(code)s %(text)s" \
+                    > reports/flake8.out || true
+
+                    python3 -m bandit -r src -f json -o reports/bandit.json || true
+                '''
+
+                archiveArtifacts artifacts: 'reports/flake8.out, reports/bandit.json', fingerprint: true
+                sh 'echo "Informes de Flake8 y Bandit generados"'
+            }
+        }
+
+        stage('Deploy') {
+            agent { label 'principal' }
+            steps {
+                sh '''
+                    sam --version
+                    sam build
+                    sam validate --region us-east-1
+                    sam deploy \
+                      --stack-name staging-todo-list-aws \
+                      --region us-east-1 \
+                      --s3-bucket poletillo333 \
+                      --s3-prefix todolist \
+                      --capabilities CAPABILITY_IAM \
+                      --no-confirm-changeset \
+                      --no-fail-on-empty-changeset
+                '''
+
+                sh '''
+                    aws cloudformation describe-stacks \
+                      --stack-name staging-todo-list-aws \
+                      --region us-east-1 \
+                      --query "Stacks[0].Outputs[?OutputKey=='BaseUrlApi'].OutputValue" \
+                      --output text > api-url.txt
+                '''
+                stash name: 'api-url', includes: 'api-url.txt'
+                sh 'echo "URL de la API desplegada:" && cat api-url.txt'
+            }
+        }
+
+        stage('Rest Test') {
+            steps {
+                unstash 'api-url'
+                sh '''
+                    mkdir -p reports
+                    export BASE_URL=$(cat api-url.txt)
+                    echo "BASE_URL=$BASE_URL"
+                    pytest --junitxml=reports/result-rest.xml test/integration/todoApiTest.py
+                '''
+            }
+            post {
+                always {
+                    junit 'reports/result-rest.xml'
+                }
+            }
+        }
+
+        stage('Promote') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'github-token', usernameVariable: 'GIT_USERNAME', passwordVariable: 'GIT_TOKEN')]) {
+                sh '''
+                    git config user.name "pdejulian"
+                    git config user.email "pdejulian@gmail.com"
+
+                    git fetch origin
+                    git checkout master
+                    git pull origin master
+                    git merge origin/develop --no-ff -m "Commit automatico desde develop a master"
+                    git push https://${GIT_USERNAME}:${GIT_TOKEN}@github.com/pdejulian/todo-list-aws.git master
+                '''
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            archiveArtifacts artifacts: 'reports/*, api-url.txt', fingerprint: true, allowEmptyArchive: true
+        }
+    }
+}
