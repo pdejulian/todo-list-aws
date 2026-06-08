@@ -6,36 +6,20 @@ pipeline {
             steps {
                 deleteDir()
                 git credentialsId: 'github-token',
-                    branch: 'develop',
+                    branch: 'master',
                     url: 'https://github.com/pdejulian/todo-list-aws.git'
-                sh 'echo "Codigo descargado de la rama develop"'
-            }
-        }
-        stage('Static Test') {
-            steps {
-                sh '''
-                    mkdir -p reports
-
-                    python3 -m flake8 src \
-                    --format="%(path)s:%(row)d:%(col)d: %(code)s %(text)s" \
-                    > reports/flake8.out || true
-
-                    python3 -m bandit -r src -f json -o reports/bandit.json || true
-                '''
-
-                archiveArtifacts artifacts: 'reports/flake8.out, reports/bandit.json', fingerprint: true
-                sh 'echo "Informes de Flake8 y Bandit generados"'
+                sh 'echo "Codigo descargado de la rama master"'
             }
         }
 
-        stage('Deploy') {
+        stage('Deploy-pro') {
             steps {
                 sh '''
                     sam --version
                     sam build
                     sam validate --region us-east-1
                     sam deploy \
-                      --stack-name staging-todo-list-aws \
+                      --stack-name production-todo-list-aws \
                       --region us-east-1 \
                       --s3-bucket poletillo333 \
                       --s3-prefix todolist \
@@ -46,7 +30,7 @@ pipeline {
 
                 sh '''
                     aws cloudformation describe-stacks \
-                      --stack-name staging-todo-list-aws \
+                      --stack-name production-todo-list-aws \
                       --region us-east-1 \
                       --query "Stacks[0].Outputs[?OutputKey=='BaseUrlApi'].OutputValue" \
                       --output text > api-url.txt
@@ -63,29 +47,12 @@ pipeline {
                     mkdir -p reports
                     export BASE_URL=$(cat api-url.txt)
                     echo "BASE_URL=$BASE_URL"
-                    pytest --junitxml=reports/result-rest.xml test/integration/todoApiTest.py
+                    pytest -m readonly --junitxml=reports/result-rest.xml test/integration/todoApiTest.py
                 '''
             }
             post {
                 always {
                     junit 'reports/result-rest.xml'
-                }
-            }
-        }
-
-        stage('Promote') {
-            steps {
-                withCredentials([usernamePassword(credentialsId: 'github-token', usernameVariable: 'GIT_USERNAME', passwordVariable: 'GIT_TOKEN')]) {
-                sh '''
-                    git config user.name "pdejulian"
-                    git config user.email "pdejulian@gmail.com"
-
-                    git fetch origin
-                    git checkout master
-                    git pull origin master
-                    git merge origin/develop --no-ff -m "Commit automatico desde develop a master"
-                    git push https://${GIT_USERNAME}:${GIT_TOKEN}@github.com/pdejulian/todo-list-aws.git master
-                '''
                 }
             }
         }
